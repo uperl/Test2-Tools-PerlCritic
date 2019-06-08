@@ -104,6 +104,13 @@ sub _args
   ($files, $critic, $test_name);
 }
 
+sub _chomp
+{
+  my $str = shift;
+  chomp $str;
+  $str;
+}
+
 =head1 FUNCTIONS
 
 =head2 perl_critic_ok
@@ -159,7 +166,7 @@ sub perl_critic_ok
       push @diag, '';
       push @diag, sprintf("%s [sev %s]", $policy, $first->severity);
       push @diag, $first->description;
-      push @diag, $first->diagnostics;
+      push @diag, _chomp($first->diagnostics);
       push @diag, '';
       foreach my $violation ($violations{$policy}->@*)
       {

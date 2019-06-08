@@ -203,6 +203,69 @@ subtest 'perl_critic_ok' => sub {
 
   };
 
+  subtest 'fail' => sub {
+
+    package main {}
+    package Perl::Critic::Policy::Foo::Bar {
+
+      use base qw( Perl::Critic::Policy );
+      use Perl::Critic::Utils qw( :booleans :severities );
+
+      sub supported_parameters {
+        return {
+          name => 'foo_bar',
+          description => 'A violation of the simple Foo Bar principal',
+        };
+      }
+
+      sub default_severity { $SEVERITY_HIGHEST }
+      sub default_themes { () }
+      sub applies_to { 'PPI::Token::Word' }
+
+      sub violates {
+        my($self, $elem) = @_;
+        if($elem->literal eq 'package')
+        {
+          return $self->violation( 'Foo Bar found', [29], $elem);
+        }
+        return;
+      }
+
+    }
+
+    my $critic = Perl::Critic->new(
+      -only => 1,
+    );
+    $critic->add_policy( -policy => 'Perl::Critic::Policy::Foo::Bar' );
+
+    is(
+      intercept { perl_critic_ok 'corpus/lib1', $critic },
+      array {
+        event Fail => sub {
+          call name => 'no Perl::Critic policy violations for corpus/lib1';
+          call facet_data => hash {
+            field info => [map {
+              my %foo = ( debug => 1, tag => 'DIAG', details => $_ );
+              \%foo;
+            } (
+              '',
+              'Perl::Critic::Policy::Foo::Bar [sev 5]',
+              'Foo Bar found',
+              '    No diagnostics available',
+              '',
+              'found at corpus/lib1/Bar.pm line 1 column 1',
+              'found at corpus/lib1/Baz.pm line 1 column 1',
+              'found at corpus/lib1/Foo.pm line 1 column 1',
+            )];
+            etc;
+          };
+        };
+      },
+      'simple fail'
+    );
+
+  };
+
 };
 
 done_testing;

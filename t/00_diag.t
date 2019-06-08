@@ -12,6 +12,7 @@ my $post_diag;
 $modules{$_} = $_ for qw(
   ExtUtils::MakeMaker
   Perl::Critic
+  Perl::Critic::Policy
   Perl::Critic::Utils
   Ref::Util
   Test2::API
