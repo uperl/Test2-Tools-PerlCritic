@@ -4,7 +4,7 @@ force    = 0
 verbose  = 4
 
 [BuiltinFunctions::ProhibitSleepViaSelect]
-[BuiltinFunctions::ProhibitStringyEval]
+;[BuiltinFunctions::ProhibitStringyEval]
 [BuiltinFunctions::RequireGlobFunction]
 [ClassHierarchies::ProhibitOneArgBless]
 ;[ControlStructures::ProhibitMutatingListFunctions]
@@ -21,10 +21,8 @@ verbose  = 4
 ;[Subroutines::ProhibitSubroutinePrototypes]
 [TestingAndDebugging::RequireUseStrict]
 equivalent_modules = Test2::V0
-;; TODO: [NEX-62] add use warnings where it is missing
-;; from lib
-;[TestingAndDebugging::RequireUseWarnings]
-;equivalent_modules = Test2::V0
+[TestingAndDebugging::RequireUseWarnings]
+equivalent_modules = Test2::V0
 ;severity = 5
 [ValuesAndExpressions::ProhibitLeadingZeros]
 [Variables::ProhibitConditionalDeclarations]
