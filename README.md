@@ -47,6 +47,9 @@ across multiple files.
 As a convenience, if the test passes then a true value is returned.
 Otherwise a false will be returned.
 
+`done_testing` or the equivalent is NOT called by this function.
+You are responsible for calling that yourself.
+
 # CAVEATS
 
 [Test::Perl::Critic](https://metacpan.org/pod/Test::Perl::Critic) has been around longer, and probably does at least some things smarter.

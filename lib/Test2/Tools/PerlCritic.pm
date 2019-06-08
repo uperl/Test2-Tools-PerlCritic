@@ -128,6 +128,9 @@ across multiple files.
 As a convenience, if the test passes then a true value is returned.
 Otherwise a false will be returned.
 
+C<done_testing> or the equivalent is NOT called by this function.
+You are responsible for calling that yourself.
+
 =cut
 
 sub perl_critic_ok
