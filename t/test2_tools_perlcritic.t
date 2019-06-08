@@ -59,7 +59,7 @@ subtest '_args' => sub {
       qr/not a file or directory: corpus\/lib1\/Bogus\.pm/,
       'bogus filename',
     );
-  
+
   };
 
   subtest 'critic' => sub {
@@ -119,7 +119,7 @@ subtest '_args' => sub {
       qr/options must be either an array or hash reference/,
       'do not accept non hash or array',
     );
-  
+
   };
 
   subtest 'test name' => sub {
@@ -166,6 +166,40 @@ subtest '_args' => sub {
       'override test name (positional)'
     );
 
+
+  };
+
+};
+
+subtest 'perl_critic_ok' => sub {
+
+  subtest 'pass' => sub {
+
+    my $mock = mock 'Perl::Critic' => (
+      override => [ critique => sub { () } ],
+    );
+
+    is(
+      intercept { perl_critic_ok 'corpus/lib1/Foo.pm' },
+      array {
+        event Pass => sub {
+          call name => 'no Perl::Critic policy violations for corpus/lib1/Foo.pm';
+        };
+        end;
+      },
+      'pass with default test name'
+    );
+
+    is(
+      intercept { perl_critic_ok 'corpus/lib1/Foo.pm', 'override test name' },
+      array {
+        event Pass => sub {
+          call name => 'override test name';
+        };
+        end;
+      },
+      'pass with override test name'
+    );
 
   };
 
