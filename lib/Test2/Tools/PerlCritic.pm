@@ -189,8 +189,8 @@ L<Test::Perl::Critic> has been around longer, and probably does at least some th
 The fact that this module groups policy violations for all files by class means that it has
 to store more diagnostics in memory before sending them out I<en masse>, where as
 L<Test::Perl::Critic> sends violations for each file as it processes them.  L<Test::Perl::Critic>
-also comes with some code to do processing in parallel.  Some of these issues may or may not
-be addressed in future versions of this module.
+also comes with some code to optionally do processing in parallel.  Some of these issues may
+or may not be addressed in future versions of this module.
 
 =head1 SEE ALSO
 
