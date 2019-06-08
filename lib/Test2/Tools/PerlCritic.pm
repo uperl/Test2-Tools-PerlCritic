@@ -100,7 +100,7 @@ sub perl_critic_ok
       push @diag, '';
       foreach my $violation ($violations{$policy}->@*)
       {
-        push @diag, sprintf("%s:%s.%s",
+        push @diag, sprintf("found at %s line %s column %s",
           $violation->logical_filename,
           $violation->logical_line_number,
           $violation->visual_column_number,
