@@ -35,7 +35,7 @@ addressing violations.
 
 Run [Perl::Critic](https://metacpan.org/pod/Perl::Critic) on the given file or directory.  If `\@options` or
 `\%options` are provided, then they will be passed into the
-[Perl::Critic](https://metacpan.org/pod/Perl::Critic) constructor.  If `$critic` (an instance of [Perl::Critic](https://metacpan.org/pod/Perl::Critic)
+[Perl::Critic](https://metacpan.org/pod/Perl::Critic) constructor.  If `$critic` (an instance of [Perl::Critic](https://metacpan.org/pod/Perl::Critic))
 is provided, then that [Perl::Critic](https://metacpan.org/pod/Perl::Critic) instance will be used instead
 of creating one internally.  Finally the `$test_name` may be provided
 if you do not like the default test name.

@@ -116,7 +116,7 @@ sub _args
 
 Run L<Perl::Critic> on the given file or directory.  If C<\@options> or
 C<\%options> are provided, then they will be passed into the
-L<Perl::Critic> constructor.  If C<$critic> (an instance of L<Perl::Critic>
+L<Perl::Critic> constructor.  If C<$critic> (an instance of L<Perl::Critic>)
 is provided, then that L<Perl::Critic> instance will be used instead
 of creating one internally.  Finally the C<$test_name> may be provided
 if you do not like the default test name.
