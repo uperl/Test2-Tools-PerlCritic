@@ -41,31 +41,41 @@ addressing violations.
 
 sub _args
 {
-  my $file = shift;
+  my $files = shift;
 
-  if(defined $file)
+  if(defined $files)
   {
-    unless(-f "$file" || -d "$file")
+    if(is_ref $files)
     {
-      croak "no such file: $file";
+      unless(is_plain_arrayref $files)
+      {
+        croak "file argument muse be a file/directory name or and array of reference of file/directory names";
+      }
     }
+    else
+    {
+      $files = [$files];
+    }
+
+    @$files = map { "$_" } @$files;
+
   }
   else
   {
-    croak "no file provided";
+    croak "no files provided";
   }
 
-  my %opts;
+  my @opts;
   my $critic;
 
   if(defined $_[0] && is_ref $_[0]) {
     if(is_plain_arrayref $_[0])
     {
-      %opts = @{ shift() };
+      @opts = @{ shift() };
     }
     elsif(is_plain_hashref $_[0])
     {
-      %opts = %{ shift() };
+      @opts = %{ shift() };
     }
     elsif(eval { $_[0]->isa('Perl::Critic') })
     {
@@ -77,13 +87,21 @@ sub _args
     }
   }
 
-  $critic ||= Perl::Critic->new(%opts);
+  $critic ||= Perl::Critic->new(@opts);
 
   my $test_name = shift;
 
-  $test_name //= "no Perl::Critic policy violations for $file";
+  $test_name //= "no Perl::Critic policy violations for @$files";
 
-  ($file, $test_name, $critic, %opts);
+  @$files = sort map {
+    -f $_
+      ? $_
+      : -d $_
+        ? Perl::Critic::Utils::all_perl_files("$_")
+        : croak "not a file or directory: $_";
+  } @$files;
+
+  ($files, $critic, $test_name);
 }
 
 =head1 FUNCTIONS
@@ -114,15 +132,11 @@ Otherwise a false will be returned.
 
 sub perl_critic_ok
 {
-  my($file_or_dir, $test_name, $critic, %opts) = _args(@_);
+  my($files, $critic, $test_name) = _args(@_);
 
   my %violations;
 
-  my @files = -d "$file_or_dir"
-    ? Perl::Critic::Utils::all_perl_files("$file_or_dir")
-    : "$file_or_dir";
-
-  foreach my $file (@files)
+  foreach my $file (@$files)
   {
     foreach my $violation ($critic->critique($file))
     {
