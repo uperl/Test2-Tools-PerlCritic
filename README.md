@@ -4,13 +4,15 @@ Testing tools to enforce Perl::Critic policies
 
 # SYNOPSIS
 
-    use Test2::V0;
-    use Test2::Tools::PerlCritic;
-    
-    perl_critic_ok 'lib', 'test library files';
-    perl_critic_ok 't',   'test test files';
-    
-    done_testing;
+```perl
+use Test2::V0;
+use Test2::Tools::PerlCritic;
+
+perl_critic_ok 'lib', 'test library files';
+perl_critic_ok 't',   'test test files';
+
+done_testing;
+```
 
 # DESCRIPTION
 
@@ -27,11 +29,13 @@ addressing violations.
 
 ## perl\_critic\_ok
 
-    perl_critic_ok $file_or_directory, \@options, $test_name;
-    perl_critic_ok $file_or_directory, \%options, $test_name;
-    perl_critic_ok $file_or_directory, $critic, $test_name;
-    perl_critic_ok $file_or_directory, $test_name;
-    perl_critic_ok $file_or_directory;
+```
+perl_critic_ok $file_or_directory, \@options, $test_name;
+perl_critic_ok $file_or_directory, \%options, $test_name;
+perl_critic_ok $file_or_directory, $critic, $test_name;
+perl_critic_ok $file_or_directory, $test_name;
+perl_critic_ok $file_or_directory;
+```
 
 Run [Perl::Critic](https://metacpan.org/pod/Perl::Critic) on the given file or directory.  If `\@options` or
 `\%options` are provided, then they will be passed into the
