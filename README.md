@@ -63,6 +63,9 @@ to store more diagnostics in memory before sending them out _en masse_, where as
 also comes with some code to optionally do processing in parallel.  Some of these issues may
 or may not be addressed in future versions of this module.
 
+Since this module formats it's output the `-verbose` option is ignored at the `set_format`
+value is ignored.
+
 # SEE ALSO
 
 - [Test::Perl::Critic](https://metacpan.org/pod/Test::Perl::Critic)

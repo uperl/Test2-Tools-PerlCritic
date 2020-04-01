@@ -199,6 +199,9 @@ L<Test::Perl::Critic> sends violations for each file as it processes them.  L<Te
 also comes with some code to optionally do processing in parallel.  Some of these issues may
 or may not be addressed in future versions of this module.
 
+Since this module formats it's output the C<-verbose> option is ignored at the C<set_format>
+value is ignored.
+
 =head1 SEE ALSO
 
 =over 4
