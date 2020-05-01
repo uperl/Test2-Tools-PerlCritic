@@ -1,4 +1,4 @@
-# Test2::Tools::PerlCritic [![Build Status](https://secure.travis-ci.org/plicease/Test2-Tools-PerlCritic.png)](http://travis-ci.org/plicease/Test2-Tools-PerlCritic)
+# Test2::Tools::PerlCritic [![Build Status](https://travis-ci.org/plicease/Test2-Tools-PerlCritic.svg)](http://travis-ci.org/plicease/Test2-Tools-PerlCritic)
 
 Testing tools to enforce Perl::Critic policies
 
