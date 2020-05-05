@@ -10,6 +10,7 @@ use Ref::Util qw( is_ref is_plain_arrayref is_plain_hashref );
 use Test2::API qw( context );
 use Perl::Critic ();
 use Perl::Critic::Utils ();
+use Path::Tiny ();
 
 our @EXPORT = qw( perl_critic_ok );
 
@@ -93,7 +94,7 @@ sub _args
 
   $test_name //= "no Perl::Critic policy violations for @$files";
 
-  @$files = sort map {
+  @$files = sort map { Path::Tiny->new($_)->stringify } map {
     -f $_
       ? $_
       : -d $_
@@ -171,7 +172,7 @@ sub perl_critic_ok
       foreach my $violation ($violations{$policy}->@*)
       {
         push @diag, sprintf("found at %s line %s column %s",
-          $violation->logical_filename,
+          Path::Tiny->new($violation->logical_filename)->stringify,
           $violation->logical_line_number,
           $violation->visual_column_number,
         );

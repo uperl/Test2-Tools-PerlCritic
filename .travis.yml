@@ -23,3 +23,7 @@ jobs:
 cache:
   directories:
     - "$HOME/.cip"
+
+branches:
+  only:
+    - master
