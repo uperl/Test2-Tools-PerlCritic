@@ -8,8 +8,7 @@ Testing tools to enforce Perl::Critic policies
 use Test2::V0;
 use Test2::Tools::PerlCritic;
 
-perl_critic_ok 'lib', 'test library files';
-perl_critic_ok 't',   'test test files';
+perl_critic_ok ['lib','t'], 'test library files';
 
 done_testing;
 ```
@@ -30,14 +29,21 @@ addressing violations.
 ## perl\_critic\_ok
 
 ```
-perl_critic_ok $file_or_directory, \@options, $test_name;
-perl_critic_ok $file_or_directory, \%options, $test_name;
-perl_critic_ok $file_or_directory, $critic, $test_name;
-perl_critic_ok $file_or_directory, $test_name;
-perl_critic_ok $file_or_directory;
+perl_critic_ok $path, \@options, $test_name;
+perl_critic_ok \@path, \@options, $test_name;
+perl_critic_ok $path, \%options, $test_name;
+perl_critic_ok \@path, \%options, $test_name;
+perl_critic_ok $path, $critic, $test_name;
+perl_critic_ok \@path, $critic, $test_name;
+perl_critic_ok $path, $test_name;
+perl_critic_ok \@path, $test_name;
+perl_critic_ok $path;
+perl_critic_ok \@path;
 ```
 
-Run [Perl::Critic](https://metacpan.org/pod/Perl::Critic) on the given file or directory.  If `\@options` or
+Run [Perl::Critic](https://metacpan.org/pod/Perl::Critic) on the given files or directories.  The first argument
+(`$path` or `\@path`) can be either the path to a file or directory, or
+a array reference to a list of paths to files and directories.  If `\@options` or
 `\%options` are provided, then they will be passed into the
 [Perl::Critic](https://metacpan.org/pod/Perl::Critic) constructor.  If `$critic` (an instance of [Perl::Critic](https://metacpan.org/pod/Perl::Critic))
 is provided, then that [Perl::Critic](https://metacpan.org/pod/Perl::Critic) instance will be used instead
@@ -53,6 +59,11 @@ Otherwise a false will be returned.
 
 `done_testing` or the equivalent is NOT called by this function.
 You are responsible for calling that yourself.
+
+Since we do not automatically call `done_testing`, you can call `perl_critic_ok`
+multiple times, but keep in mind that the policy violations will only be grouped
+in each individual call, so it is probably better to provide a list of paths,
+rather than make multiple calls.
 
 # CAVEATS
 
