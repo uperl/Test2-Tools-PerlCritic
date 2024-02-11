@@ -1,6 +1,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+
+0.05      2024-02-11 11:12:33 -0700
   - Added an optional OO interface, the old Procedural
     interface still works as before (gh#8)
   - New method add_hook (gh#8)
