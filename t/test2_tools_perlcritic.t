@@ -2,60 +2,69 @@ use Test2::V0 -no_srand => 1;
 use Test2::Tools::PerlCritic;
 use Perl::Critic ();
 
-subtest '_args' => sub {
+subtest 'BUILDARGS / BUILD' => sub {
 
   subtest 'files' => sub {
 
     is(
-      [Test2::Tools::PerlCritic::_args( 'corpus/lib1/Foo.pm' )],
-      array {
-        item ['corpus/lib1/Foo.pm'];
-        etc;
+      Test2::Tools::PerlCritic->new( 'corpus/lib1/Foo.pm' ),
+      object {
+        prop blessed => 'Test2::Tools::PerlCritic';
+        call files => ['corpus/lib1/Foo.pm'];
+        call critic => object {
+          prop blessed => 'Perl::Critic';
+        };
+        call test_name => 'no Perl::Critic policy violations for corpus/lib1/Foo.pm';
       },
       'simple file',
     );
 
     is(
-      [Test2::Tools::PerlCritic::_args( 'corpus/lib1' )],
-      array {
-        item ['corpus/lib1/Bar.pm','corpus/lib1/Baz.pm','corpus/lib1/Foo.pm'];
-        etc;
+      Test2::Tools::PerlCritic->new( 'corpus/lib1' ),
+      object {
+        prop blessed => 'Test2::Tools::PerlCritic';
+        call files => ['corpus/lib1/Bar.pm','corpus/lib1/Baz.pm','corpus/lib1/Foo.pm'];
+        call critic => object {
+          prop blessed => 'Perl::Critic';
+        };
+        call test_name => 'no Perl::Critic policy violations for corpus/lib1';
       },
       'simple directory',
     );
 
     is(
-      [Test2::Tools::PerlCritic::_args( ['corpus/lib1/Foo.pm', 'corpus/lib1/Bar.pm'] )],
-      array {
-        item ['corpus/lib1/Bar.pm','corpus/lib1/Foo.pm'];
-        etc;
+      Test2::Tools::PerlCritic->new( ['corpus/lib1/Foo.pm', 'corpus/lib1/Bar.pm'] ),
+      object {
+        prop blessed => 'Test2::Tools::PerlCritic';
+        call files => ['corpus/lib1/Bar.pm','corpus/lib1/Foo.pm'];
+        call critic => object {
+          prop blessed => 'Perl::Critic';
+        };
+        call test_name => 'no Perl::Critic policy violations for corpus/lib1/Foo.pm corpus/lib1/Bar.pm';
       },
-      'two files',
     );
 
     is(
-      [Test2::Tools::PerlCritic::_args( ['corpus/lib1'] )],
-      array {
-        item ['corpus/lib1/Bar.pm','corpus/lib1/Baz.pm','corpus/lib1/Foo.pm'];
-        etc;
+      Test2::Tools::PerlCritic->new( ['corpus/lib1'] ),
+      object {
+        prop blessed => 'Test2::Tools::PerlCritic';
+        call files => ['corpus/lib1/Bar.pm','corpus/lib1/Baz.pm','corpus/lib1/Foo.pm'];
+        call critic => object {
+          prop blessed => 'Perl::Critic';
+        };
+        call test_name => 'no Perl::Critic policy violations for corpus/lib1';
       },
       'directory in array ref',
     );
 
     like(
-      dies { Test2::Tools::PerlCritic::_args() },
+      dies { Test2::Tools::PerlCritic->new() },
       qr/no files provided/,
       'no files provided',
     );
 
     like(
-      dies { Test2::Tools::PerlCritic::_args({}) },
-      qr/file argument muse be a file\/directory name or and array of reference of file\/directory names/,
-      'must be a scalar or arrray ref',
-    );
-
-    like(
-      dies { Test2::Tools::PerlCritic::_args('corpus/lib1/Bogus.pm') },
+      dies { Test2::Tools::PerlCritic->new('corpus/lib1/Bogus.pm') },
       qr/not a file or directory: corpus\/lib1\/Bogus\.pm/,
       'bogus filename',
     );
@@ -66,25 +75,24 @@ subtest '_args' => sub {
 
     my $critic = Perl::Critic->new;
     ref_is(
-      [Test2::Tools::PerlCritic::_args('corpus/lib1', $critic)]->[1],
+      Test2::Tools::PerlCritic->new('corpus/lib1', $critic)->critic,
       $critic,
       'pass through critic object',
     );
 
     ref_is_not(
-      [Test2::Tools::PerlCritic::_args('corpus/lib1')]->[1],
+      Test2::Tools::PerlCritic->new('corpus/lib1')->critic,
       $critic,
       'generate new critic',
     );
 
     is(
-      [Test2::Tools::PerlCritic::_args('corpus/lib1')],
-      array {
-        item D();
-        item object sub {
+      Test2::Tools::PerlCritic->new('corpus/lib1'),
+      object {
+        prop blessed => 'Test2::Tools::PerlCritic';
+        call critic => object {
           prop blessed => 'Perl::Critic';
         };
-        etc;
       },
       'generate new critic correct class',
     );
@@ -108,14 +116,14 @@ subtest '_args' => sub {
       ],
     );
 
-    Test2::Tools::PerlCritic::_args('corpus/lib1', [ -foo => 1, -bar => 2 ]);
+    Test2::Tools::PerlCritic->new('corpus/lib1', [ -foo => 1, -bar => 2 ]);
     is(\@opts, [ -foo =>1, -bar => 2 ], 'passing as array ref');
 
-    Test2::Tools::PerlCritic::_args('corpus/lib1', { -foo => 1, -bar => 2 });
+    Test2::Tools::PerlCritic->new('corpus/lib1', { -foo => 1, -bar => 2 });
     is(\%opts, { -foo =>1, -bar => 2 }, 'passing as hash ref');
 
     like(
-      dies { Test2::Tools::PerlCritic::_args('corpus/lib1', \"foo") },
+      dies { Test2::Tools::PerlCritic->new('corpus/lib1', \"foo") },
       qr/options must be either an array or hash reference/,
       'do not accept non hash or array',
     );
@@ -125,43 +133,33 @@ subtest '_args' => sub {
   subtest 'test name' => sub {
 
     is(
-      [Test2::Tools::PerlCritic::_args('corpus/lib1/Foo.pm')],
-      array {
-        item D();
-        item D();
-        item 'no Perl::Critic policy violations for corpus/lib1/Foo.pm';
+      Test2::Tools::PerlCritic->new('corpus/lib1/Foo.pm'),
+      object {
+        call test_name => 'no Perl::Critic policy violations for corpus/lib1/Foo.pm';
       },
       'default test name'
     );
 
     is(
-      [Test2::Tools::PerlCritic::_args('corpus/lib1/Foo.pm', 'override')],
-      array {
-        item D();
-        item D();
-        item 'override';
+      Test2::Tools::PerlCritic->new('corpus/lib1/Foo.pm', 'override'),
+      object {
+        call test_name => 'override';
       },
       'override test name'
     );
 
-    my $critic = Perl::Critic->new;
-
     is(
-      [Test2::Tools::PerlCritic::_args('corpus/lib1/Foo.pm', $critic)],
-      array {
-        item D();
-        item D();
-        item 'no Perl::Critic policy violations for corpus/lib1/Foo.pm';
+      Test2::Tools::PerlCritic->new('corpus/lib1/Foo.pm', Perl::Critic->new),
+      object {
+        call test_name => 'no Perl::Critic policy violations for corpus/lib1/Foo.pm';
       },
       'default test name (positional)'
     );
 
     is(
-      [Test2::Tools::PerlCritic::_args('corpus/lib1/Foo.pm', $critic, 'override')],
-      array {
-        item D();
-        item D();
-        item 'override';
+      Test2::Tools::PerlCritic->new('corpus/lib1/Foo.pm', Perl::Critic->new, 'override'),
+      object {
+        call test_name => 'override';
       },
       'override test name (positional)'
     );

@@ -4,6 +4,8 @@ Testing tools to enforce Perl::Critic policies
 
 # SYNOPSIS
 
+Original procedural interface:
+
 ```perl
 use Test2::V0;
 use Test2::Tools::PerlCritic;
@@ -13,10 +15,27 @@ perl_critic_ok ['lib','t'], 'test library files';
 done_testing;
 ```
 
+New OO interface:
+
+```perl
+use Test2::V0;
+use Test2::Tools::PerlCritic ();
+use Perl::Critic;
+
+my $test_critic = Test2::Tools::PerlCritic->new({
+  files     => ['lib','t'],
+  test_name => 'test library_files',
+});
+
+$test_critic->perl_critic_ok;
+
+done_testing;
+```
+
 # DESCRIPTION
 
-Test for [Perl::Critic](https://metacpan.org/pod/Perl::Critic) violations using [Test2](https://metacpan.org/pod/Test2).  Although this testing tool
-uses the [Test2](https://metacpan.org/pod/Test2) API instead of the older [Test::Builder](https://metacpan.org/pod/Test::Builder) API, the primary
+Test for [Perl::Critic](https://metacpan.org/pod/Perl::Critic) violations using [Test2](https://metacpan.org/pod/Test2).  Although this testing
+tool uses the [Test2](https://metacpan.org/pod/Test2) API instead of the older [Test::Builder](https://metacpan.org/pod/Test::Builder) API, the primary
 motivation is to provide output in a more useful form.  That is policy violations
 are grouped by policy class, and the policy class name is clearly displayed as
 a diagnostic.  The author finds the former more useful because he tends to address
@@ -64,6 +83,29 @@ Since we do not automatically call `done_testing`, you can call `perl_critic_ok`
 multiple times, but keep in mind that the policy violations will only be grouped
 in each individual call, so it is probably better to provide a list of paths,
 rather than make multiple calls.
+
+# CONSTRUCTOR
+
+```perl
+my $test_critic = Test2::Tools::PerlCritic->new(%properties);
+```
+
+Properties:
+
+- files
+
+    (REQUIRED)
+
+    List of files or directories.  Directories will be recursively searched for
+    Perl files (`.pm`, `.pl` and `.t`).
+
+- critic
+
+    The [Perl::Critic](https://metacpan.org/pod/Perl::Critic) instance.  One will be created if not provided.
+
+- test\_name
+
+    The name of the test.  This is used in diagnostics.
 
 # CAVEATS
 
