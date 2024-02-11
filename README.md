@@ -107,6 +107,42 @@ Properties:
 
     The name of the test.  This is used in diagnostics.
 
+# METHODS
+
+## perl\_critic\_ok
+
+```
+$test_critic->perl_critic_ok;
+```
+
+The method version works just like the functional version above,
+except it doesn't take any additional arguments.
+
+## add\_hook
+
+```
+$test_critic->add_hook($hook_name, \&code);
+```
+
+Adds the given hook.  Available hooks:
+
+- progressive\_check
+
+    ```perl
+    $test_critic->add_hook(progressive_check => sub ($test_critic, $policy, $file, $count) {
+      ...
+      return $bool;
+    });
+    ```
+
+    This hook is made available for violations in existing code when new policies
+    are added.  Passed in are the [Test2::Tools::PerlCritic](https://metacpan.org/pod/Test2::Tools::PerlCritic) instance, the policy
+    name, the filename and the number of times the violation was found.  If the
+    violations are from an old code base with grandfathered allowed violations,
+    this hook should return true, and the violation will be reported as a `note`
+    instead of `diag` and will not cause the test as a whole to fail.  Otherwise
+    the violation will be reported using `diag` and the test as a whole will fail.
+
 # CAVEATS
 
 [Test::Perl::Critic](https://metacpan.org/pod/Test::Perl::Critic) has been around longer, and probably does at least some things smarter.

@@ -6,12 +6,12 @@ use Exporter qw( import );
 use 5.020;
 use experimental qw( postderef signatures );
 use Carp qw( croak );
-use Ref::Util qw( is_ref is_plain_arrayref is_plain_hashref is_blessed_ref );
+use Ref::Util qw( is_ref is_plain_arrayref is_plain_hashref is_blessed_ref is_plain_coderef );
 use Test2::API qw( context );
 use Perl::Critic ();
 use Perl::Critic::Utils ();
 use Path::Tiny ();
-use Class::Tiny qw( critic test_name files );
+use Class::Tiny qw( critic test_name files _hooks );
 
 our @EXPORT = qw( perl_critic_ok );
 
@@ -140,6 +140,8 @@ sub BUILD ($self, $)
   } @$files;
 
   $self->files($files);
+
+  $self->_hooks({});
 }
 
 =head1 FUNCTIONS
@@ -206,6 +208,15 @@ The name of the test.  This is used in diagnostics.
 
 =back
 
+=head1 METHODS
+
+=head2 perl_critic_ok
+
+ $test_critic->perl_critic_ok;
+
+The method version works just like the functional version above,
+except it doesn't take any additional arguments.
+
 =cut
 
 sub perl_critic_ok
@@ -224,26 +235,83 @@ sub perl_critic_ok
     }
   }
 
-  my $ctx = context();
+  my $ok = 1;
+  my @diag;
+  my @note;
 
   if(%violations)
   {
-    my @diag;
-
-    foreach my $policy (sort keys %violations)
+    foreach my $violation (sort { $a->policy cmp $b->policy } values %violations)
     {
-      push @diag, $violations{$policy}->diag;
-
+      if(my $hook = $self->_hooks->{progressive_check})
+      {
+        $violation->progressive_check($self, $hook);
+      }
+      push @diag, $violation->diag;
+      push @note, $violation->note;
+      $ok = 0 unless $violation->ok;
     }
+  }
 
-    $ctx->fail_and_release($self->test_name, @diag);
-    return 0;
+  my $ctx = context();
+  if($ok)
+  {
+    $ctx->pass($self->test_name);
+    $ctx->diag($_) for @diag;
   }
   else
   {
-    $ctx->pass_and_release($self->test_name);
-    return 1;
+    $ctx->fail($self->test_name, @diag);
   }
+
+  if(@note)
+  {
+    $ctx->note("### The following violations were grandfathered from before ###");
+    $ctx->note("### these polcies were applied and so should be fixed only  ###");
+    $ctx->note("### when practical                                          ###");
+    $ctx->note($_) for @note;
+  }
+
+  $ctx->release;
+}
+
+=head2 add_hook
+
+ $test_critic->add_hook($hook_name, \&code);
+
+Adds the given hook.  Available hooks:
+
+=over 4
+
+=item progressive_check
+
+ $test_critic->add_hook(progressive_check => sub ($test_critic, $policy, $file, $count) {
+   ...
+   return $bool;
+ });
+
+This hook is made available for violations in existing code when new policies
+are added.  Passed in are the L<Test2::Tools::PerlCritic> instance, the policy
+name, the filename and the number of times the violation was found.  If the
+violations are from an old code base with grandfathered allowed violations,
+this hook should return true, and the violation will be reported as a C<note>
+instead of C<diag> and will not cause the test as a whole to fail.  Otherwise
+the violation will be reported using C<diag> and the test as a whole will fail.
+
+=back
+
+=cut
+
+sub add_hook ($self, $name, $sub)
+{
+  if($name =~ /^(?:progressive_check)$/)
+  {
+    if(is_plain_coderef($sub)) {
+      return $self->_hooks->{$name} = $sub;
+    }
+    croak "hook is not a code reference";
+  }
+  croak "unknown hook: $name";
 }
 
 package Test2::Tools::PerlCritic::Violation;
@@ -269,20 +337,31 @@ sub _chomp ($str)
   return $str;
 }
 
+sub _text ($self)
+{
+  my @txt;
+  push @txt, '';
+  push @txt, sprintf("%s [sev %s]", $self->policy, $self->severity);
+  push @txt, $self->description;
+  push @txt, _chomp($self->diagnostics);
+  push @txt, '';
+  return @txt;
+}
+
 sub diag ($self)
 {
   my @diag;
 
-  push @diag, '';
-  push @diag, sprintf("%s [sev %s]", $self->policy, $self->severity);
-  push @diag, $self->description;
-  push @diag, _chomp($self->diagnostics);
-  push @diag, '';
+  my $first = 1;
 
   foreach my $file (sort { $a->logical_filename cmp $b->logical_filename } values $self->files->%*)
   {
+    next if $file->progressive_allowed;
     foreach my $location ($file->locations->@*)
     {
+      push @diag, $self->_text if $first;
+      $first = 0;
+
       push @diag, sprintf("found at %s line %s column %s",
         Path::Tiny->new($file->logical_filename)->stringify,
         $location->logical_line_number,
@@ -294,9 +373,54 @@ sub diag ($self)
   return @diag;
 }
 
+sub note ($self)
+{
+  my @diag;
+
+  my $first = 1;
+
+  foreach my $file (sort { $a->logical_filename cmp $b->logical_filename } values $self->files->%*)
+  {
+    next unless $file->progressive_allowed;
+    foreach my $location ($file->locations->@*)
+    {
+      push @diag, $self->_text if $first;
+      $first = 0;
+
+      push @diag, sprintf("found at %s line %s column %s",
+        Path::Tiny->new($file->logical_filename)->stringify,
+        $location->logical_line_number,
+        $location->visual_column_number,
+      );
+    }
+  }
+
+  return @diag;
+}
+
+sub ok ($self)
+{
+  foreach my $file (values $self->files->%*)
+  {
+    return 0 unless $file->ok;
+  }
+  return 1;
+}
+
+sub progressive_check ($self, $test_critic, $code)
+{
+  foreach my $file (values $self->files->%*)
+  {
+    if($code->($test_critic, $self->policy, $file->logical_filename, $file->count))
+    {
+      $file->progressive_allowed(1);
+    }
+  }
+}
+
 package Test2::Tools::PerlCritic::File;
 
-use Class::Tiny qw( logical_filename locations );
+use Class::Tiny qw( logical_filename locations progressive_allowed );
 
 sub BUILDARGS ($class, $violation)
 {
@@ -304,6 +428,11 @@ sub BUILDARGS ($class, $violation)
   $args{logical_filename} = $violation->logical_filename;
   $args{locations} = [];
   return \%args;
+}
+
+sub BUILD ($self, $)
+{
+  $self->progressive_allowed(0);
 }
 
 sub add_location ($self, $violation)
@@ -314,6 +443,11 @@ sub add_location ($self, $violation)
 sub count ($self)
 {
   scalar $self->locations->@*;
+}
+
+sub ok ($self)
+{
+  return !!$self->progressive_allowed;
 }
 
 package Test2::Tools::PerlCritic::Location;

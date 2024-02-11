@@ -1,6 +1,7 @@
 use Test2::V0 -no_srand => 1;
 use Test2::Tools::PerlCritic;
 use Perl::Critic ();
+use experimental qw( signatures );
 
 subtest 'BUILDARGS / BUILD' => sub {
 
@@ -203,34 +204,6 @@ subtest 'perl_critic_ok' => sub {
 
   subtest 'fail' => sub {
 
-    package main {}
-    package Perl::Critic::Policy::Foo::Bar {
-
-      use base qw( Perl::Critic::Policy );
-      use Perl::Critic::Utils qw( :booleans :severities );
-
-      sub supported_parameters {
-        return {
-          name => 'foo_bar',
-          description => 'A violation of the simple Foo Bar principal',
-        };
-      }
-
-      sub default_severity { $SEVERITY_HIGHEST }
-      sub default_themes { () }
-      sub applies_to { 'PPI::Token::Word' }
-
-      sub violates {
-        my($self, $elem) = @_;
-        if($elem->literal eq 'package')
-        {
-          return $self->violation( 'Foo Bar found', [29], $elem);
-        }
-        return;
-      }
-
-    }
-
     my $critic = Perl::Critic->new(
       -only => 1,
     );
@@ -266,4 +239,174 @@ subtest 'perl_critic_ok' => sub {
 
 };
 
+subtest 'hooks' => sub {
+
+  subtest 'errors' => sub {
+
+    is(
+      dies { Test2::Tools::PerlCritic->new({ files => '.'})->add_hook("bogus" => sub {})},
+      match qr/^unknown hook: bogus/,
+      'does on invalid hook name'
+    );
+
+    is(
+      dies { Test2::Tools::PerlCritic->new({ files => '.'})->add_hook("progressive_check" => "foo")},
+      match qr/^hook is not a code reference/,
+      'does on invalid hook name'
+    );
+
+  };
+
+  subtest 'progressive_check' => sub {
+
+    subtest 'has legacy violation' => sub {
+
+      my $test_critic = Test2::Tools::PerlCritic->new({
+        critic => do {
+          my $critic = Perl::Critic->new( -only => 1 );
+          $critic->add_policy( -policy => 'Perl::Critic::Policy::Foo::Bar' );
+          $critic;
+        },
+        files => 'corpus/lib1',
+      });
+
+      my %actual_args;
+
+      $test_critic->add_hook( progressive_check => sub {
+        $actual_args{$_[2]} = \@_;
+        return 1;
+      });
+
+      is(
+        intercept { $test_critic->perl_critic_ok },
+        array {
+          event Pass => sub {
+            call name => 'no Perl::Critic policy violations for corpus/lib1';
+          };
+          event Note => sub {
+            call message => $_;
+          } for (
+                '### The following violations were grandfathered from before ###',
+                '### these polcies were applied and so should be fixed only  ###',
+                '### when practical                                          ###',
+                '',
+                'Perl::Critic::Policy::Foo::Bar [sev 5]',
+                'Foo Bar found',
+                '    No diagnostics available',
+                '',
+                'found at corpus/lib1/Bar.pm line 1 column 1',
+                'found at corpus/lib1/Baz.pm line 1 column 1',
+                'found at corpus/lib1/Foo.pm line 1 column 1',
+          );
+        },
+        'does not fail with legacy violations'
+      );
+
+      is(
+        \%actual_args,
+        hash {
+          field 'corpus/lib1/Bar.pm' => array {
+            item object {
+              prop blessed => 'Test2::Tools::PerlCritic';
+            };
+            item 'Perl::Critic::Policy::Foo::Bar';
+            item 'corpus/lib1/Bar.pm';
+            item 1;
+            end;
+          };
+          etc;
+        },
+        'got expected args',
+      );
+
+    };
+
+    subtest 'partial legacy violations' => sub {
+
+      my $test_critic = Test2::Tools::PerlCritic->new({
+        critic => do {
+          my $critic = Perl::Critic->new( -only => 1 );
+          $critic->add_policy( -policy => 'Perl::Critic::Policy::Foo::Bar' );
+          $critic;
+        },
+        files => 'corpus/lib1',
+      });
+
+      $test_critic->add_hook( progressive_check => sub ($test_critic, $policy, $filename, $count) {
+        return $filename eq 'corpus/lib1/Bar.pm';
+      });
+
+      is(
+        intercept { $test_critic->perl_critic_ok },
+        array {
+          event Fail => sub {
+            call name => 'no Perl::Critic policy violations for corpus/lib1';
+            call facet_data => hash {
+              field info => [map {
+                my %foo = ( debug => 1, tag => 'DIAG', details => $_ );
+                \%foo;
+              } (
+                '',
+                'Perl::Critic::Policy::Foo::Bar [sev 5]',
+                'Foo Bar found',
+                '    No diagnostics available',
+                '',
+                'found at corpus/lib1/Baz.pm line 1 column 1',
+                'found at corpus/lib1/Foo.pm line 1 column 1',
+              )];
+              etc;
+            };
+          };
+          event Note => sub {
+            call message => $_;
+          } for (
+                '### The following violations were grandfathered from before ###',
+                '### these polcies were applied and so should be fixed only  ###',
+                '### when practical                                          ###',
+                '',
+                'Perl::Critic::Policy::Foo::Bar [sev 5]',
+                'Foo Bar found',
+                '    No diagnostics available',
+                '',
+                'found at corpus/lib1/Bar.pm line 1 column 1',
+          );
+        },
+        'does not fail with legacy violations'
+      );
+
+    };
+
+  };
+
+};
+
 done_testing;
+
+package main {}
+package Perl::Critic::Policy::Foo::Bar {
+
+  use base qw( Perl::Critic::Policy );
+  use Perl::Critic::Utils qw( :booleans :severities );
+
+  sub supported_parameters {
+    return {
+      name => 'foo_bar',
+      description => 'A violation of the simple Foo Bar principal',
+    };
+  }
+
+  sub default_severity { $SEVERITY_HIGHEST }
+  sub default_themes { () }
+  sub applies_to { 'PPI::Token::Word' }
+
+  sub violates {
+    my($self, $elem) = @_;
+    if($elem->literal eq 'package')
+    {
+      return $self->violation( 'Foo Bar found', [29], $elem);
+    }
+    return;
+  }
+
+}
+
