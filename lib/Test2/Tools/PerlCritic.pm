@@ -307,7 +307,9 @@ sub add_hook ($self, $name, $sub)
   if($name =~ /^(?:progressive_check)$/)
   {
     if(is_plain_coderef($sub)) {
-      return $self->_hooks->{$name} = $sub;
+      croak "Only one $name hook allowed" if defined $self->_hooks->{$name};
+      $self->_hooks->{$name} = $sub;
+      return $self;
     }
     croak "hook is not a code reference";
   }

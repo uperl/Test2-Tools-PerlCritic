@@ -255,6 +255,17 @@ subtest 'hooks' => sub {
       'does on invalid hook name'
     );
 
+    is(
+      dies {
+        Test2::Tools::PerlCritic
+          ->new({ files => '.'})
+          ->add_hook( progressive_check => sub {})
+          ->add_hook( progressive_check => sub {})
+      },
+      match qr/^Only one progressive_check hook allowed/,
+      'does not allow the same hook more than once',
+    );
+
   };
 
   subtest 'progressive_check' => sub {
