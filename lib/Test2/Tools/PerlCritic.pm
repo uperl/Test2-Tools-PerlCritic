@@ -2,15 +2,16 @@ package Test2::Tools::PerlCritic;
 
 use strict;
 use warnings;
-use base qw( Exporter );
+use Exporter qw( import );
 use 5.020;
 use experimental qw( postderef signatures );
 use Carp qw( croak );
-use Ref::Util qw( is_ref is_plain_arrayref is_plain_hashref );
+use Ref::Util qw( is_ref is_plain_arrayref is_plain_hashref is_blessed_ref );
 use Test2::API qw( context );
 use Perl::Critic ();
 use Perl::Critic::Utils ();
 use Path::Tiny ();
+use Class::Tiny qw( critic test_name files );
 
 our @EXPORT = qw( perl_critic_ok );
 
@@ -19,6 +20,8 @@ our @EXPORT = qw( perl_critic_ok );
 
 =head1 SYNOPSIS
 
+Original procedural interface:
+
  use Test2::V0;
  use Test2::Tools::PerlCritic;
  
@@ -26,10 +29,25 @@ our @EXPORT = qw( perl_critic_ok );
  
  done_testing;
 
+New OO interface:
+
+ use Test2::V0;
+ use Test2::Tools::PerlCritic ();
+ use Perl::Critic;
+ 
+ my $test_critic = Test2::Tools::PerlCritic->new({
+   files     => ['lib','t'],
+   test_name => 'test library_files',
+ });
+ 
+ $test_critic->perl_critic_ok;
+ 
+ done_testing;
+
 =head1 DESCRIPTION
 
-Test for L<Perl::Critic> violations using L<Test2>.  Although this testing tool
-uses the L<Test2> API instead of the older L<Test::Builder> API, the primary
+Test for L<Perl::Critic> violations using L<Test2>.  Although this testing
+tool uses the L<Test2> API instead of the older L<Test::Builder> API, the primary
 motivation is to provide output in a more useful form.  That is policy violations
 are grouped by policy class, and the policy class name is clearly displayed as
 a diagnostic.  The author finds the former more useful because he tends to address
@@ -39,32 +57,16 @@ addressing violations.
 
 =cut
 
-sub _args
+sub BUILDARGS
 {
+  my $class = shift; # unused
+
+  if(is_plain_hashref $_[0] && @_ == 1)
+  {
+    return $_[0];
+  }
+
   my $files = shift;
-
-  if(defined $files)
-  {
-    if(is_ref $files)
-    {
-      unless(is_plain_arrayref $files)
-      {
-        croak "file argument muse be a file/directory name or and array of reference of file/directory names";
-      }
-    }
-    else
-    {
-      $files = [$files];
-    }
-
-    @$files = map { "$_" } @$files;
-
-  }
-  else
-  {
-    croak "no files provided";
-  }
-
   my @opts;
   my $critic;
 
@@ -91,7 +93,43 @@ sub _args
 
   my $test_name = shift;
 
-  $test_name //= "no Perl::Critic policy violations for @$files";
+  return {
+    files => $files,
+    critic => $critic,
+    test_name => $test_name,
+  };
+}
+
+sub BUILD ($self, $)
+{
+  my $files = $self->files;
+
+  if(defined $files)
+  {
+    if(is_ref $files)
+    {
+      unless(is_plain_arrayref $files)
+      {
+        croak "file argument muse be a file/directory name or and array of reference of file/directory names";
+      }
+    }
+    else
+    {
+      $files = [$files];
+    }
+
+    @$files = map { "$_" } @$files;
+
+  }
+  else
+  {
+    croak "no files provided";
+  }
+
+  unless(defined $self->test_name)
+  {
+    $self->test_name("no Perl::Critic policy violations for @$files");
+  }
 
   @$files = sort map { Path::Tiny->new($_)->stringify } map {
     -f $_
@@ -101,7 +139,7 @@ sub _args
         : croak "not a file or directory: $_";
   } @$files;
 
-  ($files, $critic, $test_name);
+  $self->files($files);
 }
 
 =head1 FUNCTIONS
@@ -143,17 +181,42 @@ multiple times, but keep in mind that the policy violations will only be grouped
 in each individual call, so it is probably better to provide a list of paths,
 rather than make multiple calls.
 
+=head1 CONSTRUCTOR
+
+ my $test_critic = Test2::Tools::PerlCritic->new(%properties);
+
+Properties:
+
+=over 4
+
+=item files
+
+(REQUIRED)
+
+List of files or directories.  Directories will be recursively searched for
+Perl files (C<.pm>, C<.pl> and C<.t>).
+
+=item critic
+
+The L<Perl::Critic> instance.  One will be created if not provided.
+
+=item test_name
+
+The name of the test.  This is used in diagnostics.
+
+=back
+
 =cut
 
 sub perl_critic_ok
 {
-  my($files, $critic, $test_name) = _args(@_);
+  my $self = is_blessed_ref($_[0]) && $_[0]->isa(__PACKAGE__) ? $_[0] : __PACKAGE__->new(@_);
 
   my %violations;
 
-  foreach my $file (@$files)
+  foreach my $file ($self->files->@*)
   {
-    foreach my $critic_violation ($critic->critique($file))
+    foreach my $critic_violation ($self->critic->critique($file))
     {
       my $policy = $critic_violation->policy;
       my $violation = $violations{$policy} //= Test2::Tools::PerlCritic::Violation->new($critic_violation);
@@ -173,12 +236,12 @@ sub perl_critic_ok
 
     }
 
-    $ctx->fail_and_release($test_name, @diag);
+    $ctx->fail_and_release($self->test_name, @diag);
     return 0;
   }
   else
   {
-    $ctx->pass_and_release($test_name);
+    $ctx->pass_and_release($self->test_name);
     return 1;
   }
 }
@@ -246,6 +309,11 @@ sub BUILDARGS ($class, $violation)
 sub add_location ($self, $violation)
 {
   push $self->locations->@*, Test2::Tools::PerlCritic::Location->new($violation);
+}
+
+sub count ($self)
+{
+  scalar $self->locations->@*;
 }
 
 package Test2::Tools::PerlCritic::Location;
