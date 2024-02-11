@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use base qw( Exporter );
 use 5.020;
-use experimental qw( postderef );
+use experimental qw( postderef signatures );
 use Carp qw( croak );
 use Ref::Util qw( is_ref is_plain_arrayref is_plain_hashref );
 use Test2::API qw( context );
@@ -104,13 +104,6 @@ sub _args
   ($files, $critic, $test_name);
 }
 
-sub _chomp
-{
-  my $str = shift;
-  chomp $str;
-  $str;
-}
-
 =head1 FUNCTIONS
 
 =head2 perl_critic_ok
@@ -160,9 +153,11 @@ sub perl_critic_ok
 
   foreach my $file (@$files)
   {
-    foreach my $violation ($critic->critique($file))
+    foreach my $critic_violation ($critic->critique($file))
     {
-      push $violations{$violation->policy}->@*, $violation;
+      my $policy = $critic_violation->policy;
+      my $violation = $violations{$policy} //= Test2::Tools::PerlCritic::Violation->new($critic_violation);
+      $violation->add_location($critic_violation);
     }
   }
 
@@ -174,20 +169,8 @@ sub perl_critic_ok
 
     foreach my $policy (sort keys %violations)
     {
-      my($first) = $violations{$policy}->@*;
-      push @diag, '';
-      push @diag, sprintf("%s [sev %s]", $policy, $first->severity);
-      push @diag, $first->description;
-      push @diag, _chomp($first->diagnostics);
-      push @diag, '';
-      foreach my $violation ($violations{$policy}->@*)
-      {
-        push @diag, sprintf("found at %s line %s column %s",
-          Path::Tiny->new($violation->logical_filename)->stringify,
-          $violation->logical_line_number,
-          $violation->visual_column_number,
-        );
-      }
+      push @diag, $violations{$policy}->diag;
+
     }
 
     $ctx->fail_and_release($test_name, @diag);
@@ -198,6 +181,67 @@ sub perl_critic_ok
     $ctx->pass_and_release($test_name);
     return 1;
   }
+}
+
+package Test2::Tools::PerlCritic::Violation;
+
+use Class::Tiny qw( severity description diagnostics policy location );
+
+sub BUILDARGS ($class, $violation)
+{
+  my %args = map { $_ => $violation->$_ } qw( severity description diagnostics policy );
+  $args{location} = Test2::Tools::PerlCritic::Location->new($violation);
+  return \%args;
+}
+
+sub BUILD ($self, $)
+{
+  $self->location([]);
+}
+
+sub add_location ($self, @violation)
+{
+  push $self->location->@*, map { Test2::Tools::PerlCritic::Location->new($_) } @violation;
+}
+
+sub _chomp
+{
+  my $str = shift;
+  chomp $str;
+  $str;
+}
+
+sub diag ($self)
+{
+  my @diag;
+
+  push @diag, '';
+  push @diag, sprintf("%s [sev %s]", $self->policy, $self->severity);
+  push @diag, $self->description;
+  push @diag, _chomp($self->diagnostics);
+  push @diag, '';
+
+  foreach my $location ($self->location->@*)
+  {
+    push @diag, sprintf("found at %s line %s column %s",
+      Path::Tiny->new(
+        $location->logical_filename)->stringify,
+        $location->logical_line_number,
+        $location->visual_column_number,
+      );
+  }
+
+  return @diag;
+}
+
+package Test2::Tools::PerlCritic::Location;
+
+use Class::Tiny qw( logical_filename logical_line_number visual_column_number );
+
+sub BUILDARGS ($class, $violation)
+{
+  my %args = map { $_ => $violation->$_ } qw( logical_filename logical_line_number visual_column_number );
+  return \%args;
 }
 
 1;
