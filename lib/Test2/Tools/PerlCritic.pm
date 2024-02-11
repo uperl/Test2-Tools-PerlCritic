@@ -157,7 +157,7 @@ sub perl_critic_ok
     {
       my $policy = $critic_violation->policy;
       my $violation = $violations{$policy} //= Test2::Tools::PerlCritic::Violation->new($critic_violation);
-      $violation->add_location($critic_violation);
+      $violation->add_file_location($critic_violation);
     }
   }
 
@@ -185,30 +185,25 @@ sub perl_critic_ok
 
 package Test2::Tools::PerlCritic::Violation;
 
-use Class::Tiny qw( severity description diagnostics policy location );
+use Class::Tiny qw( severity description diagnostics policy files );
 
 sub BUILDARGS ($class, $violation)
 {
   my %args = map { $_ => $violation->$_ } qw( severity description diagnostics policy );
-  $args{location} = Test2::Tools::PerlCritic::Location->new($violation);
+  $args{files} = {};
   return \%args;
 }
 
-sub BUILD ($self, $)
+sub add_file_location ($self, $violation)
 {
-  $self->location([]);
+  my $file = $self->files->{$violation->logical_filename} //= Test2::Tools::PerlCritic::File->new($violation);
+  $file->add_location($violation);
 }
 
-sub add_location ($self, @violation)
+sub _chomp ($str)
 {
-  push $self->location->@*, map { Test2::Tools::PerlCritic::Location->new($_) } @violation;
-}
-
-sub _chomp
-{
-  my $str = shift;
   chomp $str;
-  $str;
+  return $str;
 }
 
 sub diag ($self)
@@ -221,26 +216,45 @@ sub diag ($self)
   push @diag, _chomp($self->diagnostics);
   push @diag, '';
 
-  foreach my $location ($self->location->@*)
+  foreach my $file (sort { $a->logical_filename cmp $b->logical_filename } values $self->files->%*)
   {
-    push @diag, sprintf("found at %s line %s column %s",
-      Path::Tiny->new(
-        $location->logical_filename)->stringify,
+    foreach my $location ($file->locations->@*)
+    {
+      push @diag, sprintf("found at %s line %s column %s",
+        Path::Tiny->new($file->logical_filename)->stringify,
         $location->logical_line_number,
         $location->visual_column_number,
       );
+    }
   }
 
   return @diag;
 }
 
-package Test2::Tools::PerlCritic::Location;
+package Test2::Tools::PerlCritic::File;
 
-use Class::Tiny qw( logical_filename logical_line_number visual_column_number );
+use Class::Tiny qw( logical_filename locations );
 
 sub BUILDARGS ($class, $violation)
 {
-  my %args = map { $_ => $violation->$_ } qw( logical_filename logical_line_number visual_column_number );
+  my %args;
+  $args{logical_filename} = $violation->logical_filename;
+  $args{locations} = [];
+  return \%args;
+}
+
+sub add_location ($self, $violation)
+{
+  push $self->locations->@*, Test2::Tools::PerlCritic::Location->new($violation);
+}
+
+package Test2::Tools::PerlCritic::Location;
+
+use Class::Tiny qw( logical_line_number visual_column_number );
+
+sub BUILDARGS ($class, $violation)
+{
+  my %args = map { $_ => $violation->$_ } qw( logical_line_number visual_column_number );
   return \%args;
 }
 
