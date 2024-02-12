@@ -423,6 +423,52 @@ subtest 'hooks' => sub {
 
   };
 
+  subtest 'violations' => sub {
+
+    my $test_critic = Test2::Tools::PerlCritic->new({
+      critic => do {
+        my $critic = Perl::Critic->new( -only => 1 );
+        $critic->add_policy( -policy => 'Perl::Critic::Policy::Foo::Bar' );
+        $critic;
+      },
+      files => 'corpus/lib1',
+    });
+
+    my @args;
+    my $count = 0;
+
+    $test_critic->add_hook( violations => sub {
+      # count the number of violations which is
+      # one less that the size of the argument
+      # list since the first argument is the
+      # test critic instance
+      $count+= scalar(@_)-1;
+      @args = @_;
+    });
+
+    intercept { $test_critic->perl_critic_ok };
+
+    is(
+      \@args,
+      array {
+        item object {
+          prop blessed => 'Test2::Tools::PerlCritic';
+        };
+        item object {
+          prop blessed => 'Perl::Critic::Violation';
+        };
+      },
+      'expected argument types',
+    );
+
+    is(
+      $count,
+      3,
+      'expected number of violations',
+    );
+
+  };
+
 };
 
 done_testing;
