@@ -234,7 +234,15 @@ sub perl_critic_ok
 
   foreach my $file ($self->files->@*)
   {
-    foreach my $critic_violation ($self->critic->critique($file))
+    my @critic_violations = $self->critic->critique($file);
+    next unless @critic_violations;
+
+    if(my $hooks = $self->_hooks->{violations})
+    {
+      $_->($self, @critic_violations) for @$hooks;
+    }
+
+    foreach my $critic_violation (@critic_violations)
     {
       my $policy = $critic_violation->policy;
       my $violation = $violations{$policy} //= Test2::Tools::PerlCritic::Violation->new($critic_violation);
@@ -320,17 +328,27 @@ the violation will be reported using C<diag> and the test as a whole will fail.
 
 This hook can only be set once.
 
+=item violations
+
+ $test_critic->add_hook(violations => sub ($test_critic, @violations) {
+   ...
+ });
+
+Each time violations are returned from L<Perl::Critic/critique>, they are
+passed into this hook as a list.  The order and grouping of violations
+may change in the future.
+
 =back
 
 =cut
 
 sub add_hook ($self, $name, $sub)
 {
-  if($name =~ /^(?:progressive_check|cleanup)$/)
+  if($name =~ /^(?:progressive_check|cleanup|violations)$/)
   {
     if(is_plain_coderef($sub))
     {
-      if($name =~ /^(?:cleanup)$/)
+      if($name =~ /^(?:cleanup|violations)$/)
       {
         push $self->_hooks->{$name}->@*, $sub;
       }

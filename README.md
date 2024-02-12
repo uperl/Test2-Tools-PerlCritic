@@ -160,6 +160,18 @@ Adds the given hook.  Available hooks:
 
     This hook can only be set once.
 
+- violations
+
+    ```perl
+    $test_critic->add_hook(violations => sub ($test_critic, @violations) {
+      ...
+    });
+    ```
+
+    Each time violations are returned from ["critique" in Perl::Critic](https://metacpan.org/pod/Perl::Critic#critique), they are
+    passed into this hook as a list.  The order and grouping of violations
+    may change in the future.
+
 # CAVEATS
 
 [Test::Perl::Critic](https://metacpan.org/pod/Test::Perl::Critic) has been around longer, and probably does at least some things smarter.
