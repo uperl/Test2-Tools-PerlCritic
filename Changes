@@ -1,6 +1,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+
+0.06      2024-02-11 18:01:37 -0700
   - New hook cleanup (gh#10)
 
 0.05      2024-02-11 11:12:33 -0700
