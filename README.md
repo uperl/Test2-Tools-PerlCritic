@@ -87,7 +87,7 @@ rather than make multiple calls.
 # CONSTRUCTOR
 
 ```perl
-my $test_critic = Test2::Tools::PerlCritic->new(%properties);
+my $test_critic = Test2::Tools::PerlCritic->new(\%properties);
 ```
 
 Properties:
@@ -126,6 +126,21 @@ $test_critic->add_hook($hook_name, \&code);
 
 Adds the given hook.  Available hooks:
 
+- cleanup
+
+    ```perl
+    $test_critic->add_hook(cleanup => sub ($test_critic, $global) {
+      ...
+    });
+    ```
+
+    This hook is called when the [Test2::Tools::PerlCritic](https://metacpan.org/pod/Test2::Tools::PerlCritic) instance is destroyed.
+
+    If the hook is called during global destruction of the Perl interpreter,
+    `$global` will be set to a true value.
+
+    This hook can be set multiple times.
+
 - progressive\_check
 
     ```perl
@@ -142,6 +157,8 @@ Adds the given hook.  Available hooks:
     this hook should return true, and the violation will be reported as a `note`
     instead of `diag` and will not cause the test as a whole to fail.  Otherwise
     the violation will be reported using `diag` and the test as a whole will fail.
+
+    This hook can only be set once.
 
 # CAVEATS
 
