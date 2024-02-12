@@ -389,6 +389,40 @@ subtest 'hooks' => sub {
 
   };
 
+  subtest 'cleanup' => sub {
+
+    my $test_critic = Test2::Tools::PerlCritic->new({
+      files => ['corpus/lib1'],
+    });
+
+    my @actual_args;
+    my $count = 0;
+
+    $test_critic->add_hook( cleanup => sub ($test_critic, $global) {
+      push @actual_args, [ ref $test_critic, $global ];
+      $count += 1;
+    });
+
+    $test_critic->add_hook( cleanup => sub {
+      $count += 2;
+    });
+
+    undef $test_critic;
+
+    is(
+      \@actual_args,
+      [ [ 'Test2::Tools::PerlCritic', F() ] ],
+      'expected args',
+    );
+
+    is(
+      $count,
+      3,
+      'called both cleanup hooks',
+    );
+
+  };
+
 };
 
 done_testing;

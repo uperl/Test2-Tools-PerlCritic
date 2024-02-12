@@ -141,7 +141,14 @@ sub BUILD ($self, $)
 
   $self->files($files);
 
-  $self->_hooks({});
+  $self->_hooks({
+    cleanup => [],
+  });
+}
+
+sub DEMOLISH ($self, $global)
+{
+  $_->($self, $global) for $self->_hooks->{cleanup}->@*;
 }
 
 =head1 FUNCTIONS
@@ -185,7 +192,7 @@ rather than make multiple calls.
 
 =head1 CONSTRUCTOR
 
- my $test_critic = Test2::Tools::PerlCritic->new(%properties);
+ my $test_critic = Test2::Tools::PerlCritic->new(\%properties);
 
 Properties:
 
@@ -283,6 +290,19 @@ Adds the given hook.  Available hooks:
 
 =over 4
 
+=item cleanup
+
+ $test_critic->add_hook(cleanup => sub ($test_critic, $global) {
+   ...
+ });
+
+This hook is called when the L<Test2::Tools::PerlCritic> instance is destroyed.
+
+If the hook is called during global destruction of the Perl interpreter,
+C<$global> will be set to a true value.
+
+This hook can be set multiple times.
+
 =item progressive_check
 
  $test_critic->add_hook(progressive_check => sub ($test_critic, $policy, $file, $count) {
@@ -298,17 +318,27 @@ this hook should return true, and the violation will be reported as a C<note>
 instead of C<diag> and will not cause the test as a whole to fail.  Otherwise
 the violation will be reported using C<diag> and the test as a whole will fail.
 
+This hook can only be set once.
+
 =back
 
 =cut
 
 sub add_hook ($self, $name, $sub)
 {
-  if($name =~ /^(?:progressive_check)$/)
+  if($name =~ /^(?:progressive_check|cleanup)$/)
   {
-    if(is_plain_coderef($sub)) {
-      croak "Only one $name hook allowed" if defined $self->_hooks->{$name};
-      $self->_hooks->{$name} = $sub;
+    if(is_plain_coderef($sub))
+    {
+      if($name =~ /^(?:cleanup)$/)
+      {
+        push $self->_hooks->{$name}->@*, $sub;
+      }
+      else
+      {
+        croak "Only one $name hook allowed" if defined $self->_hooks->{$name};
+        $self->_hooks->{$name} = $sub;
+      }
       return $self;
     }
     croak "hook is not a code reference";

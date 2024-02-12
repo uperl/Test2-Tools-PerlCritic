@@ -1,6 +1,7 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+  - New hook cleanup (gh#10)
 
 0.05      2024-02-11 11:12:33 -0700
   - Added an optional OO interface, the old Procedural
