@@ -15,6 +15,14 @@ our @EXPORT_OK = qw( perl_critic_config_id );
 # ABSTRACT: Utility functions
 # VERSION
 
+=head1 SYNOPSIS
+
+ use Test2::Tools::PerlCritic::Util qw( perl_critic_config_id );
+
+=head1 DESCRIPTION
+
+This module provides some utility functions useful when working with L<Perl::Critic> testing.
+
 =head1 FUNCTIONS
 
 =head2 perl_critic_config_id
@@ -22,7 +30,7 @@ our @EXPORT_OK = qw( perl_critic_config_id );
  my $id = perl_critic_config_id $config;
  my $id = perl_critic_config_id;
 
-Computes an id of the L<Perl::Critic> configuration.  The argument C<$config> 
+Computes an id of the L<Perl::Critic> configuration.  The argument C<$config>
 should be either an instance of L<Perl::Critic> or L<Perl::Critic::Config>.
 If not provided then a default L<Perl::Critic::Config> will be created.
 
@@ -70,7 +78,7 @@ sub perl_critic_config_id ($config=undef)
       # NOTE: this is private data to the policy, but
       # the convential way to store a parameter seems
       # to be with _$name
-      my $value = $policy->{"_$name"}; 
+      my $value = $policy->{"_$name"};
       $policy_config->{parameters}->{$name} = $value;
     }
   }
@@ -83,7 +91,7 @@ sub perl_critic_config_id ($config=undef)
   my $dump = $dumper->Dump;
 
   return md5_hex($dump);
-  
+
 }
 
 1;
