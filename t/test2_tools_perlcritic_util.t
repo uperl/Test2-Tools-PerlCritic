@@ -1,5 +1,5 @@
 use Test2::V0 -no_srand => 1;
-use Perl::Critic;	
+use Perl::Critic;
 use Test2::Tools::PerlCritic::Util qw( perl_critic_config_id );
 use Path::Tiny ();
 
