@@ -9,6 +9,7 @@ use Carp qw( croak );
 use Exporter qw( import );
 use Data::Dumper ();
 use Digest::MD5 qw( md5_hex );
+use Perl::Critic;
 
 our @EXPORT_OK = qw( perl_critic_config_id );
 
@@ -43,17 +44,18 @@ in virtually all cases.
 sub perl_critic_config_id ($config=undef)
 {
   my @policies = sort { $a->get_short_name cmp $b->get_short_name } do {
-    $config //= do {
-      require Perl::Critic;
-      Perl::Critic->new;
-    };
+    $config //= Perl::Critic->new;
     $config = $config->config if is_blessed_ref($config) and $config->isa('Perl::Critic');
     croak "Argument must be a Perl::Critic or Perl::Critic::Config"
       unless is_blessed_ref($config) and $config->isa('Perl::Critic::Config');
     $config->policies;
   };
 
-  my %config;
+  my %config = (
+    perl_critic_version => Perl::Critic->VERSION,
+    test2_tools_perl_critic_version => __PACKAEG__->VERSION,
+    policies => {},
+  );
 
   foreach my $policy (@policies)
   {
@@ -64,7 +66,7 @@ sub perl_critic_config_id ($config=undef)
     my $maximum_violations_per_document = $policy->get_maximum_violations_per_document;
 
     # we are assuming that we aren't using the same policy twice
-    my $policy_config = $config{$policy->get_short_name} = {
+    my $policy_config = $config{policies}->{$policy->get_short_name} = {
       version    => $policy->VERSION // '',
       parameters => {},
     };

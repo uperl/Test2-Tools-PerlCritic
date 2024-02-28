@@ -54,6 +54,20 @@ EOF
   note "CONFIG:\n", $profile->slurp_utf8;
   isnt(perl_critic_config_id(Perl::Critic->new( -profile => "$profile" )), $id, 'changing a property DOES change the config');
 
+  {
+    local $Perl::Critic::VERSION = $Perl::Critic::VERSION . "00";
+
+    note "CONFIG:\n", $profile->slurp_utf8;
+    isnt(perl_critic_config_id(Perl::Critic->new( -profile => "$profile" )), $id, 'changing the version of Perl::Critic DOES change the id');
+  }
+
+  {
+    local $Test2::Tools::PerlCritic::VERSION = '0.00';
+
+    note "CONFIG:\n", $profile->slurp_utf8;
+    isnt(perl_critic_config_id(Perl::Critic->new( -profile => "$profile" )), $id, 'changing the version of Test2::Tools::PerlCritic DOES change the id');
+  }
+
 };
 
 done_testing;
