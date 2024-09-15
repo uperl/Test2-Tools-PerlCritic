@@ -398,7 +398,7 @@ sub _text ($self)
   return @txt;
 }
 
-sub diag ($self)
+sub diag ($self, $diag = 1)
 {
   my @diag;
 
@@ -406,7 +406,14 @@ sub diag ($self)
 
   foreach my $file (sort { $a->logical_filename cmp $b->logical_filename } values $self->files->%*)
   {
-    next if $file->progressive_allowed;
+    if($diag)
+    {
+      next if $file->progressive_allowed;
+    }
+    else
+    {
+      next unless $file->progressive_allowed;
+    }
     foreach my $location ($file->locations->@*)
     {
       push @diag, $self->_text if $first;
@@ -425,27 +432,7 @@ sub diag ($self)
 
 sub note ($self)
 {
-  my @diag;
-
-  my $first = 1;
-
-  foreach my $file (sort { $a->logical_filename cmp $b->logical_filename } values $self->files->%*)
-  {
-    next unless $file->progressive_allowed;
-    foreach my $location ($file->locations->@*)
-    {
-      push @diag, $self->_text if $first;
-      $first = 0;
-
-      push @diag, sprintf("found at %s line %s column %s",
-        Path::Tiny->new($file->logical_filename)->stringify,
-        $location->logical_line_number,
-        $location->visual_column_number,
-      );
-    }
-  }
-
-  return @diag;
+  return $self->diag(0);
 }
 
 sub ok ($self)
