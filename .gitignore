@@ -1,3 +1,5 @@
 /Test2-Tools-PerlCritic-*
 /.build
 *.swp
+*.old
+*.orig
